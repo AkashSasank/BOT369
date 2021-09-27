@@ -1,0 +1,90 @@
+version: '3'
+
+services:
+  server:
+    container_name: tradingbot-server
+    restart: on-failure
+    build:
+      context: ./server
+    ports:
+      - "4005:4005"
+    command: >
+      sh -c "python manage.py makemigrations &&
+             python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             gunicorn -w 3 --bind 0.0.0.0:4005 core.wsgi:application --timeout 120 "
+    volumes:
+      - .:/app
+    env_file:
+      - ./server/.env
+    depends_on:
+      - db
+
+  db:
+    container_name: tradingbot-db
+    image: postgres:12-alpine
+    ports:
+      - "5435:5432"
+    env_file:
+      - ./server/.env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis-queue-0:
+    container_name: tradingbot-queue-0
+    image: redis:latest
+    command: --port 6379
+    expose:
+      - 6379
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 30s
+      retries: 50
+
+  redis-queue-1:
+    container_name: tradingbot-queue-1
+    image: redis:latest
+    command: --port 6380
+    expose:
+      - 6380
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 30s
+      retries: 50
+
+  celery-worker:
+    container_name: tradingbot-worker
+    restart: on-failure
+    build:
+      context: ./server
+    command: sh -c "cd /server && celery -A core multi start 2 -c 5 -l info"
+    volumes:
+      - .:/app
+    env_file:
+      - ./server/.env
+    depends_on:
+      - db
+      - redis-queue-0
+      - server
+
+
+  celery-beat:
+    container_name: tradingbot-celery-beat
+    restart: on-failure
+    build:
+      context: ./server
+    command: sh -c "cd /server && celery -A core beat -l info -S django"
+    volumes:
+      - .:/app
+    env_file:
+      - ./server/.env
+    depends_on:
+      - db
+      - redis-queue-0
+      - server
+      - celery-worker
+
+volumes:
+  pgdata:
