@@ -41,6 +41,10 @@ INSTALLED_APPS = [
     'django_celery_results',
     "whitenoise.runserver_nostatic",
     'corsheaders',
+    'apps.ledger',
+    'apps.api',
+    'apps.agent',
+    'apps.tradingbot',
 
 ]
 
