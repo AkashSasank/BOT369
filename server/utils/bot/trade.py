@@ -87,7 +87,6 @@ number_of_trades = 0
 profitable_trades = 0
 non_profitable_trades = 0
 
-
 p = 0
 loss = 0
 tf1 = '5minute'
@@ -104,7 +103,8 @@ while True:
         profit = 0
 
         trade = bot.trade(risk_multiplier=risk2reward, target_profit=target, strategy='ramp',
-                          confidence=confidence, exit_on_low_confidence=True, interval=interval, square_off_time=square_off_time)
+                          confidence=confidence, exit_on_low_confidence=True, interval=interval,
+                          square_off_time=square_off_time)
 
         print('Trades: ', trades)
 
@@ -154,6 +154,7 @@ while True:
         print(e)
         # Retry after 10 seconds
         import time
+
         time.sleep(10)
 
     except KeyboardInterrupt:

@@ -69,19 +69,20 @@ expected_loss = usable_margin * target_stoploss * -1
 
 # Initialise log data
 date = datetime.date.today()
-file = 'trade_logs/' + 'simulation_log_' + str(date) + name + str(uuid.uuid4()) + '.json'
-
+file = 'media/' + 'simulation_log_' + str(date) + name + str(uuid.uuid4()) + '.json'
+quantity = bot.min_tradable_qty * bot.boco_multiplier
 data = {
     'instrument_name': name,
     'instrument_token': instrument_token,
-    'candle_type': interval,
-    'model_name': model,
+    'type': 'simulation',
+    'timeframe': interval,
+    'ml_model': model,
     'target_profit_percentage': target,
-    'risk_to_reward_ratio': risk2reward,
+    'r2r': risk2reward,
     'time_start': str(datetime.datetime.now()),
-    'expected_profit': expected_profit,
+    'max_profit': expected_profit,
     'stoploss': expected_loss,
-    'quantity': bot.min_tradable_qty
+    'quantity': quantity
 }
 
 # Initialise variables
@@ -90,6 +91,7 @@ total_profit = 0
 number_of_trades = 0
 profitable_trades = 0
 non_profitable_trades = 0
+charges = 0
 
 p = 0
 loss = 0
@@ -126,17 +128,19 @@ while True:
                 # Calculate price per share after applying leverage
                 bp = trade['entry'] / bot.boco_multiplier
                 sp = bp + profit_per_share
-                resp = calc_charges(bp=bp, sp=sp, qty=1, exchange=bot.exchange)
+                resp = calc_charges(bp=bp, sp=sp, qty=quantity, exchange=bot.exchange)
             if trade['type'] == 'Sell':
                 # Calculate price per share after applying leverage
                 sp = trade['entry'] / bot.boco_multiplier
                 bp = sp - profit_per_share
-                resp = calc_charges(bp=bp, sp=sp, qty=1, exchange=bot.exchange)
+                resp = calc_charges(bp=bp, sp=sp, qty=quantity, exchange=bot.exchange)
             trade['charges'] = resp
+            trade['quantity'] = quantity
             trades[str(datetime.datetime.now())] = trade
             number_of_trades = number_of_trades + 1
             # pl = trade['pl']
             pl = resp['net_profit']
+            charges = charges + resp['total_charges']
             profit = profit + pl
             total_profit = total_profit + profit
             if pl > 0:
@@ -161,7 +165,9 @@ while True:
                 data['non_profitable_trades'] = non_profitable_trades
                 data['p+'] = p
                 data['p-'] = loss
-                data['profit'] = total_profit
+                data['charges'] = charges
+                data['gross_profit'] = total_profit + charges
+                data['net_profit'] = total_profit
                 data['time_end'] = str(datetime.datetime.now())
                 json.dump(data, f)
 
