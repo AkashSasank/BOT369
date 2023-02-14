@@ -1,5 +1,11 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
+from sqlalchemy.orm import Session
+
+from database.base import get_db
+from utils.choices import SecretKeys
 from apps.trading_platform.zerodha.kite import Kite
+from apps.trading_platform.zerodha.serializers import BotCredentialsPostSchema
+from apps.config.models import Secrets
 
 router = APIRouter(
     prefix="/kite",
@@ -23,3 +29,7 @@ def login():
     return {
         'url': kite.get_login_url()
     }
+
+
+# def set_app_credentials(form_data: BotCredentialsPostSchema = Depends(), db: Session = Depends(get_db())):
+#     if form_data.api_key:

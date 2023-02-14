@@ -6,9 +6,10 @@ from database.base import get_db
 from apps.auth.utils import (
     create_access_token,
     create_refresh_token,
-    verify_password
+    verify_password,
+    user_from_refresh_token
 )
-from apps.auth.serializers import TokenSchema
+from apps.auth.serializers import TokenSchema, AccessTokenGETSchema
 
 router = APIRouter(
     prefix="/auth",
@@ -36,4 +37,14 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
     return {
         "access_token": create_access_token(user.email),
         "refresh_token": create_refresh_token(user.email),
+    }
+
+
+@router.post('/token/', summary='Get new access token given refresh token', response_model=TokenSchema)
+async def get_access_token(data: AccessTokenGETSchema = Depends()):
+    email = user_from_refresh_token(data.refresh_token)
+
+    return {
+        "access_token": create_access_token(email),
+        "refresh_token": data.refresh_token,
     }
